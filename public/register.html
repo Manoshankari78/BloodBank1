@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Register - Blood Donation System</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #fff0f0, #ffe6e6);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h2 {
+      margin-top: 30px;
+      color: #b30000;
+    }
+
+    .tab {
+      display: flex;
+      margin-top: 20px;
+      gap: 10px;
+    }
+
+    .tab button {
+      padding: 10px 20px;
+      border: 1px solid #b30000;
+      background: white;
+      color: #b30000;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background 0.3s ease;
+    }
+
+    .tab button:hover, .tab button.active-tab {
+      background: #b30000;
+      color: white;
+    }
+
+    .form-container {
+      display: none;
+      margin-top: 30px;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 500px;
+    }
+
+    .form-container.active {
+      display: block;
+    }
+
+    form input, form select, form textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    form button {
+      width: 100%;
+      background: #b30000;
+      color: white;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    form button:hover {
+      background: #800000;
+    }
+    .toggle-btn {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.toggle-btn a {
+  color: #b30000;
+  text-decoration: none;
+  font-weight: normal;
+}
+
+.toggle-btn a:hover {
+  text-decoration: underline;
+}
+
+  </style>
+</head>
+<body>
+
+  <h2>Register</h2>
+
+  <div class="tab">
+    <button class="active-tab" onclick="showForm('donor', this)">Donor</button>
+    <button onclick="showForm('recipient', this)">Recipient</button>
+  </div>
+
+  <div id="donorForm" class="form-container active">
+    <form id="donor-register">
+      <input type="text" name="name" placeholder="Name" required>
+      <input type="number" name="age" placeholder="Age" required>
+      <select name="gender" required>
+        <option value="">Gender</option>
+        <option>Male</option>
+        <option>Female</option>
+        <option>Other</option>
+      </select>
+      <input type="text" name="blood_group" placeholder="Blood Group (e.g. A+)" required>
+      <input type="text" name="phone_number" placeholder="Phone Number" required>
+      <input type="email" name="email" placeholder="Email" required>
+      <textarea name="address" placeholder="Address" required></textarea>
+      <input type="text" name="health_status" placeholder="Health Status" required>
+      <button type="submit">Register as Donor</button>
+    </form>
+    <div class="toggle-btn">
+        <a href="login.html">Already have an account? Login</a>
+    </div>
+  </div>
+
+  <div id="recipientForm" class="form-container">
+    <form id="recipient-register">
+      <input type="text" name="name" placeholder="Name" required>
+      <input type="number" name="age" placeholder="Age" required>
+      <select name="gender" required>
+        <option value="">Gender</option>
+        <option>Male</option>
+        <option>Female</option>
+        <option>Other</option>
+      </select>
+      <input type="text" name="blood_group_required" placeholder="Required Blood Group" required>
+      <input type="text" name="hospital_name" placeholder="Hospital Name" required>
+      <input type="text" name="phone_number" placeholder="Phone Number" required>
+      <input type="number" name="quantity_required" placeholder="Quantity Required (ml)" required>
+      <button type="submit">Register as Recipient</button>
+    </form>
+    <div class="toggle-btn">
+        <a href="login.html">Already have an account? Login</a>
+    </div>
+  </div>
+
+  <script>
+    function showForm(role, btn) {
+      document.getElementById('donorForm').classList.remove('active');
+      document.getElementById('recipientForm').classList.remove('active');
+      document.querySelectorAll('.tab button').forEach(b => b.classList.remove('active-tab'));
+
+      document.getElementById(role + 'Form').classList.add('active');
+      btn.classList.add('active-tab');
+    }
+
+    document.getElementById('donor-register').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+
+      const res = await fetch('/api/users/register/donor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      alert(result.message);
+      if (res.ok) e.target.reset();
+    });
+
+    document.getElementById('recipient-register').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+
+      const res = await fetch('/api/users/register/recipient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      alert(result.message);
+      if (res.ok) e.target.reset();
+    });
+  </script>
+
+</body>
+</html>

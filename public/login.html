@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Blood Donation System</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #f2f2ff, #e6e6ff);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h2 {
+      margin-top: 30px;
+      color: #333399;
+    }
+
+    .tab {
+      display: flex;
+      margin-top: 20px;
+      gap: 10px;
+    }
+
+    .tab button {
+      padding: 10px 20px;
+      border: 1px solid #333399;
+      background: white;
+      color: #333399;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background 0.3s ease;
+    }
+
+    .tab button:hover, .tab button.active-tab {
+      background: #333399;
+      color: white;
+    }
+
+    .form-container {
+      display: none;
+      margin-top: 30px;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .form-container.active {
+      display: block;
+    }
+
+    form input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    form button {
+      width: 100%;
+      background: #333399;
+      color: white;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    form button:hover {
+      background: #1a1a80;
+    }
+    .toggle-btn {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.toggle-btn a {
+  color: #333399;
+  text-decoration: none;
+  font-weight: normal;
+}
+
+.toggle-btn a:hover {
+  text-decoration: underline;
+}
+
+  </style>
+</head>
+<body>
+
+  <h2>Login</h2>
+
+  <div class="tab">
+    <button class="active-tab" onclick="showForm('donor', this)">Donor</button>
+    <button onclick="showForm('recipient', this)">Recipient</button>
+  </div>
+
+  <div id="donorForm" class="form-container active">
+    <form id="donor-login">
+      <input type="email" name="email" placeholder="Email" required>
+      <input type="text" name="phone_number" placeholder="Phone Number" required>
+      <button type="submit">Login as Donor</button>
+    </form>
+    <div class="toggle-btn">
+        <a href="register.html">Don't have an account? Register</a>
+      </div>
+      
+  </div>
+
+  <div id="recipientForm" class="form-container">
+    <form id="recipient-login">
+      <input type="email" name="email" placeholder="Email" required>
+      <input type="text" name="phone_number" placeholder="Phone Number" required>
+      <button type="submit">Login as Recipient</button>
+    </form>
+    <div class="toggle-btn">
+        <a href="register.html">Don't have an account? Register</a>
+      </div>
+      
+  </div>
+
+  <script>
+    function showForm(role, btn) {
+      document.getElementById('donorForm').classList.remove('active');
+      document.getElementById('recipientForm').classList.remove('active');
+      document.querySelectorAll('.tab button').forEach(b => b.classList.remove('active-tab'));
+
+      document.getElementById(role + 'Form').classList.add('active');
+      btn.classList.add('active-tab');
+    }
+
+    document.getElementById('donor-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+
+      const res = await fetch('/api/users/login/donor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      alert(result.message);
+      if (res.ok) e.target.reset();
+    });
+
+    document.getElementById('recipient-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+
+      const res = await fetch('/api/users/login/recipient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      alert(result.message);
+      if (res.ok) e.target.reset();
+    });
+  </script>
+
+</body>
+</html>

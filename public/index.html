@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>LifeLine Connect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slide {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .active-slide {
+            display: block;
+            opacity: 1;
+        }
+
+        .dot {
+            height: 12px;
+            width: 12px;
+            background-color: #bbb;
+            border-radius: 50%;
+            display: inline-block;
+            transition: background-color 0.3s ease;
+            margin: 0 4px;
+            cursor: pointer;
+        }
+
+        .dot.active {
+            background-color: #4B5563;
+        }
+    </style>
+</head>
+<body class="bg-red-50">
+
+    <header class="bg-red-600 text-white py-4 px-6 flex justify-between items-center shadow-md rounded-b-md">
+        <h1 class="text-2xl font-bold">LifeLine Connect</h1>
+        <div class="space-x-4">
+            <a href="register.html" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded text-sm transition duration-300 ease-in-out">Try for Free</a>
+            <a href="login.html" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded text-sm transition duration-300 ease-in-out">Login</a>
+        </div>
+    </header>
+
+    <section class="max-w-4xl mx-auto my-8">
+        <div class="relative overflow-hidden rounded-lg shadow-lg h-[500px]">
+            <div class="slide active-slide absolute inset-0">
+                <img src="assets/images/blood-donation-1.png" alt="Blood Donation" class="w-full h-full object-cover rounded-lg"/>
+                <div class="absolute bottom-4 left-4 text-white text-lg font-semibold bg-black bg-opacity-50 px-4 py-2 rounded-md">
+                    Donate Blood, Save Lives
+                </div>
+            </div>
+            <div class="slide absolute inset-0">
+                <img src="assets/images/blood-donation-2.png" alt="Healthy Donation" class="w-full h-full object-cover rounded-lg"/>
+                <div class="absolute bottom-4 left-4 text-white text-lg font-semibold bg-black bg-opacity-50 px-4 py-2 rounded-md">
+                    Give the Gift of Life
+                </div>
+            </div>
+            <div class="slide absolute inset-0">
+                <img src="assets/images/blood-donation-3.png" alt="Be a Hero" class="w-full h-full object-cover rounded-lg"/>
+                <div class="absolute bottom-4 left-4 text-white text-lg font-semibold bg-black bg-opacity-50 px-4 py-2 rounded-md">
+                    Be a Hero
+                </div>
+            </div>
+
+            <button onclick="changeSlide(-1)" class="absolute left-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-2 rounded-r-md hover:bg-opacity-70 transition duration-300 ease-in-out">&#10094;</button>
+            <button onclick="changeSlide(1)" class="absolute right-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-2 rounded-l-md hover:bg-opacity-70 transition duration-300 ease-in-out">&#10095;</button>
+        </div>
+
+        <div class="text-center mt-4">
+            <span class="dot active" onclick="goToSlide(0)" aria-label="Go to slide 1"></span>
+            <span class="dot" onclick="goToSlide(1)" aria-label="Go to slide 2"></span>
+            <span class="dot" onclick="goToSlide(2)" aria-label="Go to slide 3"></span>
+        </div>
+    </section>
+
+    <section class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold text-red-700 mb-4 text-center">Connect, Donate, Save Lives</h2>
+        <p class="text-gray-700 text-center mb-4">
+            LifeLine Connect helps link blood donors and recipients, streamlining the process and saving lives.
+        </p>
+        <div class="text-center">
+            <a href="register.html" class="bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded text-lg transition duration-300 ease-in-out">Start for Free</a>
+        </div>
+    </section>
+
+    <section class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold text-red-700 mb-4">Key Features and Benefits</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">For Donors</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>Easy registration and profile management.</li>
+                    <li>Search and connect with recipients directly.</li>
+                    <li>Schedule and manage your donations.</li>
+                    <li>Receive notifications for urgent blood requests.</li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">For Recipients</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>Quickly find available donors in your area.</li>
+                    <li>Post blood requests with specific requirements.</li>
+                    <li>Connect with donors directly.</li>
+                    <li>Track the status of your requests.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-gray-800 text-white py-4 text-center rounded-t-md shadow-md">
+        <div class="flex justify-center items-center gap-4 mb-2">
+            <a href="#" class="hover:text-red-300 transition duration-300 ease-in-out">Contact Us</a>
+            <span class="text-gray-500">|</span>
+            <a href="#" class="hover:text-red-300 transition duration-300 ease-in-out">Terms of Service</a>
+            <span class="text-gray-500">|</span>
+            <a href="#" class="hover:text-red-300 transition duration-300 ease-in-out">Privacy Policy</a>
+        </div>
+        <p>© 2025 LifeLine Connect. All rights reserved.</p>
+    </footer>
+
+    <script>
+        window.addEventListener('load', () => {
+            let current = 0;
+            const slides = document.querySelectorAll('.slide');
+            const dots = document.querySelectorAll('.dot');
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active-slide', i === index);
+                    dots[i].classList.toggle('active', i === index);
+                });
+                current = index;
+            }
+
+            function changeSlide(step) {
+                let newIndex = (current + step + slides.length) % slides.length;
+                showSlide(newIndex);
+            }
+
+            function goToSlide(index) {
+                showSlide(index);
+            }
+
+            window.changeSlide = changeSlide;
+            window.goToSlide = goToSlide;
+
+            // Auto-advance slideshow
+            setInterval(() => changeSlide(1), 5000);
+        });
+    </script>
+</body>
+</html>
