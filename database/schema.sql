@@ -35,15 +35,16 @@ CREATE TABLE Blood_Inventory (
   Quantity INT NOT NULL DEFAULT 0,
   Expiry_Date DATE NOT NULL,
   Updated_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (Blood_Group) -- Ensure one row per blood group
+  UNIQUE (Blood_Group)
 );
 
--- Blood Requests Table
+-- Blood Requests Table (Modified to include Urgency)
 CREATE TABLE Blood_Request (
   Request_ID INT AUTO_INCREMENT PRIMARY KEY,
   Recipient_ID INT,
   Blood_Group ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-') NOT NULL,
   Quantity INT NOT NULL,
+  Urgency BOOLEAN DEFAULT FALSE,
   Status ENUM('Pending', 'Approved', 'Fulfilled', 'Rejected') DEFAULT 'Pending',
   Request_Date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (Recipient_ID) REFERENCES Recipient(Recipient_ID)
@@ -58,4 +59,16 @@ CREATE TABLE Donation (
   Donation_Date DATE NOT NULL,
   Location VARCHAR(255),
   FOREIGN KEY (Donor_ID) REFERENCES Donor(Donor_ID)
+);
+
+-- Notifications Table
+CREATE TABLE Notifications (
+  Notification_ID INT AUTO_INCREMENT PRIMARY KEY,
+  Donor_ID INT,
+  Request_ID INT,
+  Message TEXT NOT NULL,
+  Is_Read BOOLEAN DEFAULT FALSE,
+  Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (Donor_ID) REFERENCES Donor(Donor_ID),
+  FOREIGN KEY (Request_ID) REFERENCES Blood_Request(Request_ID)
 );
