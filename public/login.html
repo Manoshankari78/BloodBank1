@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Login - Blood Donation System</title>
+  <title>Login - LifeLine Connect</title>
   <link rel="stylesheet" href="/assets/css/styles.css">
   <style>
     body {
@@ -80,25 +80,24 @@
     form button:hover {
       background: #1a1a80;
     }
+
     .toggle-btn {
-  margin-top: 20px;
-  text-align: center;
-}
+      margin-top: 20px;
+      text-align: center;
+    }
 
-.toggle-btn a {
-  color: #333399;
-  text-decoration: none;
-  font-weight: normal;
-}
+    .toggle-btn a {
+      color: #333399;
+      text-decoration: none;
+      font-weight: normal;
+    }
 
-.toggle-btn a:hover {
-  text-decoration: underline;
-}
-
+    .toggle-btn a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-
   <h2>Login</h2>
 
   <div class="tab">
@@ -109,25 +108,23 @@
   <div id="donorForm" class="form-container active">
     <form id="donor-login">
       <input type="email" name="email" placeholder="Email" required>
-      <input type="text" name="phone_number" placeholder="Phone Number" required>
+      <input type="password" name="password" placeholder="Password" required>
       <button type="submit">Login as Donor</button>
     </form>
     <div class="toggle-btn">
-        <a href="register.html">Don't have an account? Register</a>
-      </div>
-      
+      <a href="register.html">Don't have an account? Register</a>
+    </div>
   </div>
 
   <div id="recipientForm" class="form-container">
     <form id="recipient-login">
-      <input type="email" name="email" placeholder="Email" required>
       <input type="text" name="phone_number" placeholder="Phone Number" required>
+      <input type="password" name="password" placeholder="Password" required>
       <button type="submit">Login as Recipient</button>
     </form>
     <div class="toggle-btn">
-        <a href="register.html">Don't have an account? Register</a>
-      </div>
-      
+      <a href="register.html">Don't have an account? Register</a>
+    </div>
   </div>
 
   <script>
@@ -143,7 +140,10 @@
     document.getElementById('donor-login').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
-      const data = Object.fromEntries(formData.entries());
+      const data = {
+        email: formData.get('email'),
+        password: formData.get('password')
+      };
 
       const res = await fetch('/api/users/login/donor', {
         method: 'POST',
@@ -152,14 +152,21 @@
       });
 
       const result = await res.json();
-      alert(result.message);
-      if (res.ok) e.target.reset();
+      if (res.ok) {
+        localStorage.setItem('user', JSON.stringify({ role: 'donor', id: result.id }));
+        window.location.href = '/dashboard.html';
+      } else {
+        alert(result.message);
+      }
     });
 
     document.getElementById('recipient-login').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
-      const data = Object.fromEntries(formData.entries());
+      const data = {
+        phone_number: formData.get('phone_number'),
+        password: formData.get('password')
+      };
 
       const res = await fetch('/api/users/login/recipient', {
         method: 'POST',
@@ -168,10 +175,13 @@
       });
 
       const result = await res.json();
-      alert(result.message);
-      if (res.ok) e.target.reset();
+      if (res.ok) {
+        localStorage.setItem('user', JSON.stringify({ role: 'recipient', id: result.id }));
+        window.location.href = '/dashboard.html';
+      } else {
+        alert(result.message);
+      }
     });
   </script>
-
 </body>
 </html>
