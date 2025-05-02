@@ -102,6 +102,34 @@ router.post('/register/recipient', async (req, res) => {
   }
 });
 
+// Admin Registration (Optional: For initial setup)
+router.post('/register/admin', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required.' });
+    }
+
+    const [existingAdmin] = await db.promise().query('SELECT * FROM Admin WHERE Username = ?', [username]);
+    if (existingAdmin.length > 0) {
+      return res.status(400).json({ message: 'Admin already exists.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await db.promise().query(
+      'INSERT INTO Admin (Username, Password) VALUES (?, ?)',
+      [username, hashedPassword]
+    );
+
+    res.status(201).json({ message: 'Admin registered successfully.' });
+  } catch (error) {
+    console.error('Error registering admin:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
 // Donor Login
 router.post('/login/donor', async (req, res) => {
   const { email, password } = req.body;
@@ -162,6 +190,33 @@ router.post('/login/recipient', async (req, res) => {
   }
 });
 
+// Admin Login
+router.post('/login/admin', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required.' });
+    }
+
+    const [admins] = await db.promise().query('SELECT * FROM Admin WHERE Username = ?', [username]);
+    if (admins.length === 0) {
+      return res.status(400).json({ message: 'Admin not found.' });
+    }
+
+    const admin = admins[0];
+    const isMatch = await bcrypt.compare(password, admin.Password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Incorrect password.' });
+    }
+
+    res.status(200).json({ message: 'Admin logged in successfully.', id: admin.Admin_ID });
+  } catch (error) {
+    console.error('Error logging in admin:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
 // Schedule Donation
 router.post('/donations', async (req, res) => {
   const { donor_id, blood_group, quantity, donation_date, location } = req.body;
@@ -203,7 +258,7 @@ router.post('/donations', async (req, res) => {
   }
 });
 
-// Request Blood (Modified to Handle Urgency and Notifications)
+// Request Blood
 router.post('/requests', async (req, res) => {
   const { recipient_id, blood_group, quantity, urgency = false } = req.body;
 
@@ -237,7 +292,6 @@ router.post('/requests', async (req, res) => {
       );
     }
 
-    // Generate Notifications for Urgent Requests
     if (urgency) {
       const [donors] = await db.promise().query('SELECT Donor_ID FROM Donor WHERE Blood_Group = ?', [blood_group]);
       if (donors.length > 0) {
@@ -300,10 +354,30 @@ router.get('/notifications/:donor_id', async (req, res) => {
 
   try {
     const [notifications] = await db.promise().query(
-      'SELECT Notification_ID, Request_ID, Message, Is_Read, Created_At FROM Notifications WHERE Donor_ID = ? ORDER BY Created_At DESC',
+      'SELECT n.Notification_ID, n.Request_ID, n.Message, n.Is_Read, n.Created_At, br.Urgency ' +
+      'FROM Notifications n ' +
+      'JOIN Blood_Request br ON n.Request_ID = br.Request_ID ' +
+      'WHERE n.Donor_ID = ? ORDER BY n.Created_At DESC',
       [donor_id]
     );
-    res.status(200).json(notifications);
+
+    // Fetch donor responses to check if they have already responded
+    const [responses] = await db.promise().query(
+      'SELECT Request_ID, Status FROM Donor_Response WHERE Donor_ID = ?',
+      [donor_id]
+    );
+    const responseMap = responses.reduce((map, response) => {
+      map[response.Request_ID] = response.Status;
+      return map;
+    }, {});
+
+    const notificationsWithResponse = notifications.map(notification => ({
+      ...notification,
+      hasResponded: !!responseMap[notification.Request_ID],
+      responseStatus: responseMap[notification.Request_ID] || null
+    }));
+
+    res.status(200).json(notificationsWithResponse);
   } catch (error) {
     console.error('Error fetching notifications:', error);
     res.status(500).json({ message: 'Server error.' });
@@ -319,6 +393,219 @@ router.put('/notifications/:notification_id/read', async (req, res) => {
     res.status(200).json({ message: 'Notification marked as read.' });
   } catch (error) {
     console.error('Error marking notification as read:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Donor Respond to Urgent Request
+router.post('/respond/:donor_id/:request_id', async (req, res) => {
+  const { donor_id, request_id } = req.params;
+  const { status } = req.body; // 'Accepted' or 'Declined'
+
+  try {
+    if (!['Accepted', 'Declined'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid response status.' });
+    }
+
+    const [donor] = await db.promise().query('SELECT * FROM Donor WHERE Donor_ID = ?', [donor_id]);
+    if (donor.length === 0) {
+      return res.status(404).json({ message: 'Donor not found.' });
+    }
+
+    const [request] = await db.promise().query('SELECT * FROM Blood_Request WHERE Request_ID = ?', [request_id]);
+    if (request.length === 0) {
+      return res.status(404).json({ message: 'Request not found.' });
+    }
+
+    // Check if donor has already responded
+    const [existingResponse] = await db.promise().query(
+      'SELECT * FROM Donor_Response WHERE Donor_ID = ? AND Request_ID = ?',
+      [donor_id, request_id]
+    );
+    if (existingResponse.length > 0) {
+      return res.status(400).json({ message: 'You have already responded to this request.' });
+    }
+
+    await db.promise().query(
+      'INSERT INTO Donor_Response (Donor_ID, Request_ID, Status) VALUES (?, ?, ?)',
+      [donor_id, request_id, status]
+    );
+
+    // If the donor accepts, we can optionally schedule a donation (simplified here)
+    if (status === 'Accepted') {
+      const donationDate = new Date().toISOString().split('T')[0]; // Today for simplicity
+      await db.promise().query(
+        'INSERT INTO Donation (Donor_ID, Blood_Group, Quantity, Donation_Date, Location) VALUES (?, ?, ?, ?, ?)',
+        [donor_id, donor[0].Blood_Group, 1, donationDate, 'Hospital (via urgent request)']
+      );
+      await db.promise().query(
+        'INSERT INTO Blood_Inventory (Blood_Group, Quantity, Expiry_Date) VALUES (?, ?, DATE_ADD(?, INTERVAL 42 DAY)) ON DUPLICATE KEY UPDATE Quantity = Quantity + ?',
+        [donor[0].Blood_Group, 1, donationDate, 1]
+      );
+
+      // Check if the request can now be fulfilled
+      const [inventory] = await db.promise().query('SELECT Quantity FROM Blood_Inventory WHERE Blood_Group = ?', [request[0].Blood_Group]);
+      const available = inventory.length > 0 ? inventory[0].Quantity : 0;
+      if (available >= request[0].Quantity && request[0].Status === 'Pending') {
+        await db.promise().query('UPDATE Blood_Request SET Status = "Approved" WHERE Request_ID = ?', [request_id]);
+        await db.promise().query(
+          'UPDATE Blood_Inventory SET Quantity = Quantity - ? WHERE Blood_Group = ?',
+          [request[0].Quantity, request[0].Blood_Group]
+        );
+      }
+    }
+
+    res.status(200).json({ message: `Response ${status.toLowerCase()} successfully.` });
+  } catch (error) {
+    console.error('Error responding to request:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Fetch Donation History for a Donor
+router.get('/donations/:donor_id', async (req, res) => {
+  const { donor_id } = req.params;
+
+  try {
+    const [donations] = await db.promise().query(
+      'SELECT Donation_ID, Blood_Group, Quantity, Donation_Date, Location ' +
+      'FROM Donation WHERE Donor_ID = ? ORDER BY Donation_Date DESC',
+      [donor_id]
+    );
+    res.status(200).json(donations);
+  } catch (error) {
+    console.error('Error fetching donation history:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Fetch Request History for a Recipient
+router.get('/requests/:recipient_id', async (req, res) => {
+  const { recipient_id } = req.params;
+
+  try {
+    const [requests] = await db.promise().query(
+      'SELECT Request_ID, Blood_Group, Quantity, Urgency, Status, Request_Date ' +
+      'FROM Blood_Request WHERE Recipient_ID = ? ORDER BY Request_Date DESC',
+      [recipient_id]
+    );
+    res.status(200).json(requests);
+  } catch (error) {
+    console.error('Error fetching request history:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Admin: Get All Blood Inventory
+router.get('/admin/inventory', async (req, res) => {
+  try {
+    const [inventory] = await db.promise().query(
+      'SELECT Inventory_ID, Blood_Group, Quantity, Expiry_Date, Updated_At FROM Blood_Inventory ORDER BY Blood_Group'
+    );
+    res.status(200).json(inventory);
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Admin: Update Blood Inventory
+router.put('/admin/inventory/:inventory_id', async (req, res) => {
+  const { inventory_id } = req.params;
+  const { quantity, expiry_date } = req.body;
+
+  try {
+    if (quantity < 0) {
+      return res.status(400).json({ message: 'Quantity must be non-negative.' });
+    }
+
+    const [inventory] = await db.promise().query('SELECT * FROM Blood_Inventory WHERE Inventory_ID = ?', [inventory_id]);
+    if (inventory.length === 0) {
+      return res.status(404).json({ message: 'Inventory item not found.' });
+    }
+
+    await db.promise().query(
+      'UPDATE Blood_Inventory SET Quantity = ?, Expiry_Date = ?, Updated_At = NOW() WHERE Inventory_ID = ?',
+      [quantity, expiry_date, inventory_id]
+    );
+
+    res.status(200).json({ message: 'Inventory updated successfully.' });
+  } catch (error) {
+    console.error('Error updating inventory:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Admin: Get All Pending Blood Requests with Donor Responses
+router.get('/admin/requests', async (req, res) => {
+  try {
+    const [requests] = await db.promise().query(
+      'SELECT br.Request_ID, br.Recipient_ID, br.Blood_Group, br.Quantity, br.Urgency, br.Status, br.Request_Date, ' +
+      'r.Name AS Recipient_Name, r.Hospital_Name, ' +
+      'GROUP_CONCAT(dr.Donor_ID, ":", dr.Status SEPARATOR ";") AS Donor_Responses ' +
+      'FROM Blood_Request br ' +
+      'JOIN Recipient r ON br.Recipient_ID = r.Recipient_ID ' +
+      'LEFT JOIN Donor_Response dr ON br.Request_ID = dr.Request_ID ' +
+      'WHERE br.Status IN ("Pending", "Approved") ' +
+      'GROUP BY br.Request_ID ' +
+      'ORDER BY br.Request_Date DESC'
+    );
+
+    const formattedRequests = requests.map(request => {
+      const donorResponses = request.Donor_Responses
+        ? request.Donor_Responses.split(';').map(response => {
+            const [donorId, status] = response.split(':');
+            return { donor_id: parseInt(donorId), status };
+          })
+        : [];
+      return { ...request, Donor_Responses: donorResponses };
+    });
+
+    res.status(200).json(formattedRequests);
+  } catch (error) {
+    console.error('Error fetching requests:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Admin: Approve or Reject Blood Request
+router.put('/admin/requests/:request_id', async (req, res) => {
+  const { request_id } = req.params;
+  const { action } = req.body; // 'approve' or 'reject'
+
+  try {
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ message: 'Invalid action.' });
+    }
+
+    const [request] = await db.promise().query('SELECT * FROM Blood_Request WHERE Request_ID = ?', [request_id]);
+    if (request.length === 0) {
+      return res.status(404).json({ message: 'Request not found.' });
+    }
+
+    if (request[0].Status !== 'Pending') {
+      return res.status(400).json({ message: 'Request is not in a pending state.' });
+    }
+
+    if (action === 'approve') {
+      const [inventory] = await db.promise().query('SELECT Quantity FROM Blood_Inventory WHERE Blood_Group = ?', [request[0].Blood_Group]);
+      const available = inventory.length > 0 ? inventory[0].Quantity : 0;
+      if (available < request[0].Quantity) {
+        return res.status(400).json({ message: 'Insufficient blood in inventory.' });
+      }
+
+      await db.promise().query('UPDATE Blood_Request SET Status = "Approved" WHERE Request_ID = ?', [request_id]);
+      await db.promise().query(
+        'UPDATE Blood_Inventory SET Quantity = Quantity - ? WHERE Blood_Group = ?',
+        [request[0].Quantity, request[0].Blood_Group]
+      );
+    } else {
+      await db.promise().query('UPDATE Blood_Request SET Status = "Rejected" WHERE Request_ID = ?', [request_id]);
+    }
+
+    res.status(200).json({ message: `Request ${action}d successfully.` });
+  } catch (error) {
+    console.error(`Error ${action}ing request:`, error);
     res.status(500).json({ message: 'Server error.' });
   }
 });

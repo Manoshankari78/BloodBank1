@@ -28,6 +28,14 @@ CREATE TABLE Recipient (
   Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Admin Table
+CREATE TABLE Admin (
+  Admin_ID INT AUTO_INCREMENT PRIMARY KEY,
+  Username VARCHAR(50) UNIQUE NOT NULL,
+  Password VARCHAR(255) NOT NULL,
+  Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Blood Inventory Table
 CREATE TABLE Blood_Inventory (
   Inventory_ID INT AUTO_INCREMENT PRIMARY KEY,
@@ -38,7 +46,7 @@ CREATE TABLE Blood_Inventory (
   UNIQUE (Blood_Group)
 );
 
--- Blood Requests Table (Modified to include Urgency)
+-- Blood Requests Table
 CREATE TABLE Blood_Request (
   Request_ID INT AUTO_INCREMENT PRIMARY KEY,
   Recipient_ID INT,
@@ -71,4 +79,16 @@ CREATE TABLE Notifications (
   Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (Donor_ID) REFERENCES Donor(Donor_ID),
   FOREIGN KEY (Request_ID) REFERENCES Blood_Request(Request_ID)
+);
+
+-- Donor Responses Table
+CREATE TABLE Donor_Response (
+  Response_ID INT AUTO_INCREMENT PRIMARY KEY,
+  Donor_ID INT,
+  Request_ID INT,
+  Status ENUM('Pending', 'Accepted', 'Declined') DEFAULT 'Pending',
+  Response_Date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (Donor_ID) REFERENCES Donor(Donor_ID),
+  FOREIGN KEY (Request_ID) REFERENCES Blood_Request(Request_ID),
+  UNIQUE (Donor_ID, Request_ID)
 );

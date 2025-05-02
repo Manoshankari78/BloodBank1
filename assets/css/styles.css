@@ -72,6 +72,7 @@ nav a {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .notification.unread {
@@ -90,8 +91,44 @@ nav a {
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  margin-left: 5px;
+  margin-top: 5px;
 }
 
 .notification button:hover {
   background: #1a1a80;
+}
+
+.notification button.accept {
+  background: #008000;
+}
+
+.notification button.accept:hover {
+  background: #006600;
+}
+
+.notification button.decline {
+  background: #b30000;
+}
+
+.notification button.decline:hover {
+  background: #800000;
+}
+
+/* Table Styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #b30000;
+  color: white;
 }

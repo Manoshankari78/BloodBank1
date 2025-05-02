@@ -47,6 +47,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
     }
     .notification.unread {
       background-color: #ffcccc;
@@ -62,9 +63,37 @@
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      margin-left: 5px;
+      margin-top: 5px;
     }
     .notification button:hover {
       background: #1a1a80;
+    }
+    .notification button.accept {
+      background: #008000;
+    }
+    .notification button.accept:hover {
+      background: #006600;
+    }
+    .notification button.decline {
+      background: #b30000;
+    }
+    .notification button.decline:hover {
+      background: #800000;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #b30000;
+      color: white;
     }
   </style>
 </head>
@@ -75,16 +104,35 @@
   </header>
   <div class="container">
     <h2 id="welcome" class="text-xl font-semibold text-red-700 mb-4"></h2>
+
+    <!-- Donor Actions -->
     <div id="donor-actions" class="hidden">
       <h3 class="text-lg font-semibold mb-2">Notifications</h3>
       <div id="notifications" class="mb-4"></div>
-      <h3 class="text-lg font-semibold mb-2">Donor Actions</h3>
+
+      <h3 class="text-lg font-semibold mb-2">Donation History</h3>
+      <div id="donation-history" class="mb-4">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Blood Group</th>
+              <th>Quantity</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody id="donation-history-body"></tbody>
+        </table>
+      </div>
+
+      <h3 class="text-lg font-semibold mb-2">Schedule a Donation</h3>
       <form id="donation-form" class="space-y-4">
         <input type="date" name="donation_date" id="donation-date" required class="border p-2 w-full">
         <div id="donation-date-error" class="error-message">Donation date must be in the future.</div>
         <input type="text" name="location" placeholder="Location" required class="border p-2 w-full">
         <button type="submit" class="btn">Schedule Donation</button>
       </form>
+
       <h3 class="text-lg font-semibold mt-4 mb-2">Search Blood</h3>
       <form id="search-form" class="space-y-4">
         <select name="blood_group" required class="border p-2 w-full">
@@ -102,8 +150,26 @@
       </form>
       <div id="search-results" class="mt-4"></div>
     </div>
+
+    <!-- Recipient Actions -->
     <div id="recipient-actions" class="hidden">
-      <h3 class="text-lg font-semibold mb-2">Recipient Actions</h3>
+      <h3 class="text-lg font-semibold mb-2">Request History</h3>
+      <div id="request-history" class="mb-4">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Blood Group</th>
+              <th>Quantity</th>
+              <th>Urgency</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="request-history-body"></tbody>
+        </table>
+      </div>
+
+      <h3 class="text-lg font-semibold mb-2">Request Blood</h3>
       <form id="request-form" class="space-y-4">
         <select name="blood_group" required class="border p-2 w-full">
           <option value="">Select Blood Group</option>
@@ -125,6 +191,43 @@
         <button type="submit" class="btn">Request Blood</button>
       </form>
     </div>
+
+    <!-- Admin Actions -->
+    <div id="admin-actions" class="hidden">
+      <h3 class="text-lg font-semibold mb-2">Manage Blood Inventory</h3>
+      <div id="inventory-list" class="mb-4">
+        <table>
+          <thead>
+            <tr>
+              <th>Blood Group</th>
+              <th>Quantity</th>
+              <th>Expiry Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-body"></tbody>
+        </table>
+      </div>
+
+      <h3 class="text-lg font-semibold mb-2">Pending Blood Requests</h3>
+      <div id="pending-requests" class="mb-4">
+        <table>
+          <thead>
+            <tr>
+              <th>Recipient</th>
+              <th>Hospital</th>
+              <th>Blood Group</th>
+              <th>Quantity</th>
+              <th>Urgency</th>
+              <th>Status</th>
+              <th>Donor Responses</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pending-requests-body"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
@@ -137,6 +240,7 @@
       const welcome = document.getElementById('welcome');
       const donorActions = document.getElementById('donor-actions');
       const recipientActions = document.getElementById('recipient-actions');
+      const adminActions = document.getElementById('admin-actions');
 
       // Validation Functions
       function validateFutureDate(dateStr) {
@@ -149,7 +253,7 @@
         return !isNaN(parsedNum) && parsedNum > 0;
       }
 
-      // Fetch and Display Notifications
+      // Fetch and Display Notifications (Donor Only)
       async function fetchNotifications(donorId) {
         try {
           const res = await fetch(`/api/users/notifications/${donorId}`);
@@ -165,9 +269,19 @@
           notifications.forEach(notification => {
             const notificationDiv = document.createElement('div');
             notificationDiv.className = `notification ${notification.Is_Read ? 'read' : 'unread'}`;
+            let buttons = '';
+            if (notification.Urgency && !notification.hasResponded) {
+              buttons += `<button class="accept" onclick="respondToRequest(${donorId}, ${notification.Request_ID}, 'Accepted')">Accept</button>`;
+              buttons += `<button class="decline" onclick="respondToRequest(${donorId}, ${notification.Request_ID}, 'Declined')">Decline</button>`;
+            } else if (notification.hasResponded) {
+              buttons += `<span>Responded: ${notification.responseStatus}</span>`;
+            }
+            if (!notification.Is_Read) {
+              buttons += `<button onclick="markAsRead(${notification.Notification_ID})">Mark as Read</button>`;
+            }
             notificationDiv.innerHTML = `
               <span>${notification.Message} (${new Date(notification.Created_At).toLocaleString()})</span>
-              ${!notification.Is_Read ? `<button onclick="markAsRead(${notification.Notification_ID})">Mark as Read</button>` : ''}
+              <div>${buttons}</div>
             `;
             notificationsDiv.appendChild(notificationDiv);
           });
@@ -181,10 +295,191 @@
         try {
           const res = await fetch(`/api/users/notifications/${notificationId}/read`, { method: 'PUT' });
           if (res.ok) {
-            fetchNotifications(user.id); // Refresh notifications
+            fetchNotifications(user.id);
           }
         } catch (error) {
           console.error('Error marking notification as read:', error);
+        }
+      };
+
+      // Respond to Urgent Request
+      window.respondToRequest = async (donorId, requestId, status) => {
+        try {
+          const res = await fetch(`/api/users/respond/${donorId}/${requestId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+          });
+          const result = await res.json();
+          alert(result.message);
+          if (res.ok) {
+            fetchNotifications(donorId);
+          }
+        } catch (error) {
+          console.error('Error responding to request:', error);
+          alert('Failed to respond. Please try again.');
+        }
+      };
+
+      // Fetch and Display Donation History (Donor Only)
+      async function fetchDonationHistory(donorId) {
+        try {
+          const res = await fetch(`/api/users/donations/${donorId}`);
+          const donations = await res.json();
+          const donationBody = document.getElementById('donation-history-body');
+          donationBody.innerHTML = '';
+
+          if (donations.length === 0) {
+            donationBody.innerHTML = '<tr><td colspan="4">No donations yet.</td></tr>';
+            return;
+          }
+
+          donations.forEach(donation => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${donation.Donation_Date}</td>
+              <td>${donation.Blood_Group}</td>
+              <td>${donation.Quantity}</td>
+              <td>${donation.Location}</td>
+            `;
+            donationBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error('Error fetching donation history:', error);
+        }
+      }
+
+      // Fetch and Display Request History (Recipient Only)
+      async function fetchRequestHistory(recipientId) {
+        try {
+          const res = await fetch(`/api/users/requests/${recipientId}`);
+          const requests = await res.json();
+          const requestBody = document.getElementById('request-history-body');
+          requestBody.innerHTML = '';
+
+          if (requests.length === 0) {
+            requestBody.innerHTML = '<tr><td colspan="5">No requests yet.</td></tr>';
+            return;
+          }
+
+          requests.forEach(request => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${new Date(request.Request_Date).toLocaleString()}</td>
+              <td>${request.Blood_Group}</td>
+              <td>${request.Quantity}</td>
+              <td>${request.Urgency ? 'Yes' : 'No'}</td>
+              <td>${request.Status}</td>
+            `;
+            requestBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error('Error fetching request history:', error);
+        }
+      }
+
+      // Admin: Fetch and Display Blood Inventory
+      async function fetchInventory() {
+        try {
+          const res = await fetch('/api/users/admin/inventory');
+          const inventory = await res.json();
+          const inventoryBody = document.getElementById('inventory-body');
+          inventoryBody.innerHTML = '';
+
+          inventory.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${item.Blood_Group}</td>
+              <td><input type="number" value="${item.Quantity}" id="quantity-${item.Inventory_ID}" class="border p-1 w-full"></td>
+              <td><input type="date" value="${item.Expiry_Date}" id="expiry-${item.Inventory_ID}" class="border p-1 w-full"></td>
+              <td><button class="btn" onclick="updateInventory(${item.Inventory_ID})">Update</button></td>
+            `;
+            inventoryBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error('Error fetching inventory:', error);
+        }
+      }
+
+      // Admin: Update Blood Inventory
+      window.updateInventory = async (inventoryId) => {
+        const quantity = document.getElementById(`quantity-${inventoryId}`).value;
+        const expiryDate = document.getElementById(`expiry-${inventoryId}`).value;
+
+        try {
+          const res = await fetch(`/api/users/admin/inventory/${inventoryId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quantity: parseInt(quantity), expiry_date: expiryDate })
+          });
+          const result = await res.json();
+          alert(result.message);
+          if (res.ok) {
+            fetchInventory();
+            fetchPendingRequests(); // Refresh requests as inventory changes may affect approvals
+          }
+        } catch (error) {
+          console.error('Error updating inventory:', error);
+          alert('Failed to update inventory. Please try again.');
+        }
+      };
+
+      // Admin: Fetch and Display Pending Requests
+      async function fetchPendingRequests() {
+        try {
+          const res = await fetch('/api/users/admin/requests');
+          const requests = await res.json();
+          const requestBody = document.getElementById('pending-requests-body');
+          requestBody.innerHTML = '';
+
+          if (requests.length === 0) {
+            requestBody.innerHTML = '<tr><td colspan="8">No pending requests.</td></tr>';
+            return;
+          }
+
+          requests.forEach(request => {
+            const donorResponses = request.Donor_Responses.length > 0
+              ? request.Donor_Responses.map(r => `Donor ${r.donor_id}: ${r.status}`).join(', ')
+              : 'None';
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${request.Recipient_Name}</td>
+              <td>${request.Hospital_Name}</td>
+              <td>${request.Blood_Group}</td>
+              <td>${request.Quantity}</td>
+              <td>${request.Urgency ? 'Yes' : 'No'}</td>
+              <td>${request.Status}</td>
+              <td>${donorResponses}</td>
+              <td>
+                ${request.Status === 'Pending' ? `
+                  <button class="btn accept" onclick="handleRequest(${request.Request_ID}, 'approve')">Approve</button>
+                  <button class="btn decline" onclick="handleRequest(${request.Request_ID}, 'reject')">Reject</button>
+                ` : 'N/A'}
+              </td>
+            `;
+            requestBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error('Error fetching requests:', error);
+        }
+      }
+
+      // Admin: Approve or Reject Request
+      window.handleRequest = async (requestId, action) => {
+        try {
+          const res = await fetch(`/api/users/admin/requests/${requestId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action })
+          });
+          const result = await res.json();
+          alert(result.message);
+          if (res.ok) {
+            fetchPendingRequests();
+          }
+        } catch (error) {
+          console.error(`Error ${action}ing request:`, error);
+          alert(`Failed to ${action} request. Please try again.`);
         }
       };
 
@@ -192,13 +487,13 @@
         welcome.textContent = 'Welcome, Donor!';
         donorActions.classList.remove('hidden');
 
-        // Fetch notifications on load
+        // Fetch notifications and donation history
         await fetchNotifications(user.id);
+        await fetchDonationHistory(user.id);
 
         try {
           const res = await fetch(`/api/users/donor/${user.id}`);
           const donor = await res.json();
-          console.log('Donor profile response:', donor);
           if (!res.ok) throw new Error(donor.message || 'Failed to fetch donor profile');
           const bloodGroup = donor.blood_group;
 
@@ -213,7 +508,6 @@
 
           donationForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            console.log('Donation form submitted');
             const formData = new FormData(e.target);
             const data = {
               donor_id: user.id,
@@ -222,7 +516,6 @@
               donation_date: formData.get('donation_date'),
               location: formData.get('location')
             };
-            console.log('Donation data sent:', data);
 
             if (!validateFutureDate(data.donation_date)) {
               donationDateError.style.display = 'block';
@@ -237,9 +530,11 @@
               });
 
               const result = await res.json();
-              console.log('Donation server response:', result);
               alert(result.message);
-              if (res.ok) e.target.reset();
+              if (res.ok) {
+                e.target.reset();
+                fetchDonationHistory(user.id);
+              }
             } catch (error) {
               console.error('Donation fetch error:', error);
               alert('Failed to schedule donation. Please try again.');
@@ -248,14 +543,11 @@
 
           document.getElementById('search-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            console.log('Search form submitted');
             const blood_group = new FormData(e.target).get('blood_group');
-            console.log('Search blood group:', blood_group);
 
             try {
               const res = await fetch(`/api/users/inventory?blood_group=${blood_group}`);
               const result = await res.json();
-              console.log('Search server response:', result);
               const resultsDiv = document.getElementById('search-results');
               resultsDiv.innerHTML = result.quantity > 0
                 ? `Available: ${result.quantity} units of ${blood_group}`
@@ -270,9 +562,12 @@
           alert('Failed to load donor profile. Please log in again.');
           window.location.href = '/login.html';
         }
-      } else {
+      } else if (user.role === 'recipient') {
         welcome.textContent = 'Welcome, Recipient!';
         recipientActions.classList.remove('hidden');
+
+        // Fetch request history
+        await fetchRequestHistory(user.id);
 
         const requestForm = document.getElementById('request-form');
         const quantityInput = document.getElementById('request-quantity');
@@ -285,17 +580,14 @@
 
         requestForm.addEventListener('submit', async (e) => {
           e.preventDefault();
-          console.log('Request form submitted');
           const formData = new FormData(e.target);
           const data = Object.fromEntries(formData.entries());
-          console.log('Request form data:', data);
           const requestData = {
             recipient_id: user.id,
             blood_group: data.blood_group,
             quantity: parseInt(data.quantity),
-            urgency: data.urgency === 'on' // Checkbox value
+            urgency: data.urgency === 'on'
           };
-          console.log('Request data sent:', requestData);
 
           if (!validatePositiveNumber(data.quantity)) {
             quantityError.style.display = 'block';
@@ -310,19 +602,28 @@
             });
 
             const result = await res.json();
-            console.log('Server response:', result);
             alert(result.message);
-            if (res.ok) e.target.reset();
+            if (res.ok) {
+              e.target.reset();
+              fetchRequestHistory(user.id);
+            }
           } catch (error) {
             console.error('Fetch error:', error);
             alert('Failed to request blood. Please try again.');
           }
         });
+      } else if (user.role === 'admin') {
+        welcome.textContent = 'Welcome, Admin!';
+        adminActions.classList.remove('hidden');
+
+        // Fetch inventory and pending requests
+        await fetchInventory();
+        await fetchPendingRequests();
       }
 
       document.getElementById('logout').addEventListener('click', () => {
         localStorage.removeItem('user');
-        window.location.href = '/login.html';
+        window.location.href = '/index.html';
       });
     });
   </script>

@@ -8,29 +8,30 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom, #f2f2ff, #e6e6ff);
+      background: linear-gradient(to bottom, #fff0f0, #ffe6e6);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
     }
 
     h2 {
-      margin-top: 30px;
-      color: #333399;
+      color: #b30000;
+      margin-bottom: 20px;
     }
 
     .tab {
       display: flex;
-      margin-top: 20px;
       gap: 10px;
+      margin-bottom: 20px;
     }
 
     .tab button {
       padding: 10px 20px;
-      border: 1px solid #333399;
+      border: 1px solid #b30000;
       background: white;
-      color: #333399;
+      color: #b30000;
       font-weight: bold;
       cursor: pointer;
       border-radius: 5px;
@@ -38,13 +39,12 @@
     }
 
     .tab button:hover, .tab button.active-tab {
-      background: #333399;
+      background: #b30000;
       color: white;
     }
 
     .form-container {
       display: none;
-      margin-top: 30px;
       background: white;
       padding: 30px;
       border-radius: 10px;
@@ -57,7 +57,7 @@
       display: block;
     }
 
-    form input {
+    form input, form select {
       width: 100%;
       padding: 10px;
       margin-bottom: 15px;
@@ -67,7 +67,7 @@
 
     form button {
       width: 100%;
-      background: #333399;
+      background: #b30000;
       color: white;
       padding: 12px;
       font-size: 16px;
@@ -78,16 +78,16 @@
     }
 
     form button:hover {
-      background: #1a1a80;
+      background: #800000;
     }
 
     .toggle-btn {
-      margin-top: 20px;
+      margin-top: 15px;
       text-align: center;
     }
 
     .toggle-btn a {
-      color: #333399;
+      color: #b30000;
       text-decoration: none;
       font-weight: normal;
     }
@@ -103,12 +103,13 @@
   <div class="tab">
     <button class="active-tab" onclick="showForm('donor', this)">Donor</button>
     <button onclick="showForm('recipient', this)">Recipient</button>
+    <button onclick="showForm('admin', this)">Admin</button>
   </div>
 
   <div id="donorForm" class="form-container active">
     <form id="donor-login">
-      <input type="email" name="email" placeholder="Email" required>
-      <input type="password" name="password" placeholder="Password" required>
+      <input type="email" name="identifier" id="donor-identifier" placeholder="Email" required>
+      <input type="password" name="password" id="donor-password" placeholder="Password" required>
       <button type="submit">Login as Donor</button>
     </form>
     <div class="toggle-btn">
@@ -118,9 +119,20 @@
 
   <div id="recipientForm" class="form-container">
     <form id="recipient-login">
-      <input type="text" name="phone_number" placeholder="Phone Number" required>
-      <input type="password" name="password" placeholder="Password" required>
+      <input type="text" name="identifier" id="recipient-identifier" placeholder="Phone Number" required>
+      <input type="password" name="password" id="recipient-password" placeholder="Password" required>
       <button type="submit">Login as Recipient</button>
+    </form>
+    <div class="toggle-btn">
+      <a href="register.html">Don't have an account? Register</a>
+    </div>
+  </div>
+
+  <div id="adminForm" class="form-container">
+    <form id="admin-login">
+      <input type="text" name="username" id="admin-username" placeholder="Username" required>
+      <input type="password" name="password" id="admin-password" placeholder="Password" required>
+      <button type="submit">Login as Admin</button>
     </form>
     <div class="toggle-btn">
       <a href="register.html">Don't have an account? Register</a>
@@ -131,6 +143,7 @@
     function showForm(role, btn) {
       document.getElementById('donorForm').classList.remove('active');
       document.getElementById('recipientForm').classList.remove('active');
+      document.getElementById('adminForm').classList.remove('active');
       document.querySelectorAll('.tab button').forEach(b => b.classList.remove('active-tab'));
 
       document.getElementById(role + 'Form').classList.add('active');
@@ -139,47 +152,58 @@
 
     document.getElementById('donor-login').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const formData = new FormData(e.target);
-      const data = {
-        email: formData.get('email'),
-        password: formData.get('password')
-      };
+      const identifier = document.getElementById('donor-identifier').value;
+      const password = document.getElementById('donor-password').value;
 
       const res = await fetch('/api/users/login/donor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify({ email: identifier, password })
       });
 
       const result = await res.json();
+      alert(result.message);
       if (res.ok) {
-        localStorage.setItem('user', JSON.stringify({ role: 'donor', id: result.id }));
+        localStorage.setItem('user', JSON.stringify({ id: result.id, role: 'donor' }));
         window.location.href = '/dashboard.html';
-      } else {
-        alert(result.message);
       }
     });
 
     document.getElementById('recipient-login').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const formData = new FormData(e.target);
-      const data = {
-        phone_number: formData.get('phone_number'),
-        password: formData.get('password')
-      };
+      const identifier = document.getElementById('recipient-identifier').value;
+      const password = document.getElementById('recipient-password').value;
 
       const res = await fetch('/api/users/login/recipient', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify({ phone_number: identifier, password })
       });
 
       const result = await res.json();
+      alert(result.message);
       if (res.ok) {
-        localStorage.setItem('user', JSON.stringify({ role: 'recipient', id: result.id }));
+        localStorage.setItem('user', JSON.stringify({ id: result.id, role: 'recipient' }));
         window.location.href = '/dashboard.html';
-      } else {
-        alert(result.message);
+      }
+    });
+
+    document.getElementById('admin-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('admin-username').value;
+      const password = document.getElementById('admin-password').value;
+
+      const res = await fetch('/api/users/login/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const result = await res.json();
+      alert(result.message);
+      if (res.ok) {
+        localStorage.setItem('user', JSON.stringify({ id: result.id, role: 'admin' }));
+        window.location.href = '/dashboard.html';
       }
     });
   </script>
