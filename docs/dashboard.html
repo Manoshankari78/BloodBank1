@@ -229,6 +229,51 @@
       </div>
     </div>
   </div>
+  <div id="admin-section" style="display: none;">
+    <h3>Urgent Blood Requests Report</h3>
+    <table id="urgent-requests-table">
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Blood Group</th>
+          <th>Quantity</th>
+          <th>Urgency</th>
+          <th>Status</th>
+          <th>Recipient Phone</th>
+          <th>Donor Responses</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  
+  <script>
+    async function fetchUrgentRequestsReport() {
+      const response = await fetch('http://localhost:3000/api/reports/urgent-requests');
+      const data = await response.json();
+      const tbody = document.querySelector('#urgent-requests-table tbody');
+      tbody.innerHTML = '';
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.Request_ID}</td>
+          <td>${row.Blood_Group}</td>
+          <td>${row.Quantity}</td>
+          <td>${row.Urgency ? 'Yes' : 'No'}</td>
+          <td>${row.Status}</td>
+          <td>${row.Recipient_Phone}</td>
+          <td>${row.Donor_Responses || 'None'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  
+    // Call this function when the admin logs in
+    if (localStorage.getItem('role') === 'admin') {
+      document.getElementById('admin-section').style.display = 'block';
+      fetchUrgentRequestsReport();
+    }
+  </script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       const user = JSON.parse(localStorage.getItem('user'));
