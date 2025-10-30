@@ -67,7 +67,6 @@ The Blood Donation Management System is a full-stack web application that facili
 - **HTML5** - Structure
 - **CSS3** - Styling
 - **JavaScript** - Interactivity
-- **Tailwind CSS** - Utility-first CSS framework
 
 ### Dependencies
 ```json
