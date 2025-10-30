@@ -1,4 +1,3 @@
-// server/db.js
 const mysql = require('mysql2');
 require('dotenv').config();
 
@@ -11,23 +10,17 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  connectTimeout: 10000,
-  // Auto-reconnect on failure
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
+  connectTimeout: 10000
+
 });
 
-// Test connection on startup
-pool.getConnection((err, connection) => {
+pool.getConnection((err, conn) => {
   if (err) {
-    console.error('Database connection failed:', err);
+    console.error('Database connection failed:', err.message);
     process.exit(1);
   }
-  if (connection) {
-    console.log('Connected to MySQL Database');
-    connection.release();
-  }
+  console.log('Connected to MySQL Database');
+  conn.release();
 });
 
 module.exports = pool.promise();
