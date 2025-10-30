@@ -11,7 +11,11 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+<<<<<<< HEAD
     "bcryptjs": "^5.1.1",
+=======
+    "bcryptjs": "^2.4.3",
+>>>>>>> 849b9716e76ae4f30d2c3e73b0defad29f823c1a
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "mysql2": "^3.14.1",
