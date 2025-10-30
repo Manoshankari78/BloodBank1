@@ -94,8 +94,8 @@ Before setting up the project, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd blood-donation-management-system
+git clone [<repository-url>](https://github.com/Manoshankari78/BloodBank1.git)
+cd BloodBank1
 ```
 
 Or download and extract the project files to your desired location.
